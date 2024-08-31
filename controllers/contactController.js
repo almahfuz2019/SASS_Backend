@@ -1,4 +1,4 @@
-const Contact = require("../models/ContactModel");
+const Contact = require("../models/contactModel");
 
 // Get all contacts with pagination
 exports.getContacts = async (req, res) => {
