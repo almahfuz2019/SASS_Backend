@@ -1,4 +1,5 @@
 const Property = require("../models/propertyModel");
+
 // Get all properties with pagination
 exports.getProperties = async (req, res) => {
   try {
@@ -50,6 +51,7 @@ exports.createProperty = async (req, res) => {
       sellerName,
       contactNumber,
       referenceEmail,
+      images, // Added images field
     } = req.body;
 
     if (
@@ -64,9 +66,13 @@ exports.createProperty = async (req, res) => {
       !price ||
       !sellerName ||
       !contactNumber ||
-      !referenceEmail
+      !referenceEmail ||
+      !images ||
+      images.length === 0 // Ensure images are provided
     ) {
-      return res.status(400).json({ error: "All fields are required" });
+      return res.status(400).json({
+        error: "All fields including at least one image are required",
+      });
     }
 
     // Create a new property
@@ -83,6 +89,7 @@ exports.createProperty = async (req, res) => {
       sellerName,
       contactNumber,
       referenceEmail,
+      images, // Add images array
     });
     await property.save();
     res
@@ -129,6 +136,7 @@ exports.updatePropertyById = async (req, res) => {
       sellerName,
       contactNumber,
       referenceEmail,
+      images, // Add images field for updating images
     } = req.body;
 
     if (!id) {
@@ -150,6 +158,7 @@ exports.updatePropertyById = async (req, res) => {
         sellerName,
         contactNumber,
         referenceEmail,
+        images, // Update images array
       },
       { new: true, runValidators: true },
     );
@@ -176,7 +185,7 @@ exports.countProperties = async (req, res) => {
   }
 };
 
-// Search properties by title or address
+// Search properties by multiple fields (title, propertyType, listingType, address, bedrooms, bathrooms, price, etc.)
 exports.searchProperties = async (req, res) => {
   try {
     const { query } = req.query;
@@ -184,13 +193,21 @@ exports.searchProperties = async (req, res) => {
       return res.status(400).json({ error: "Search query is required" });
     }
 
-    const regex = new RegExp(query, "i");
+    const regex = new RegExp(query, "i"); // Case-insensitive search
+
+    // Search across multiple fields
     const properties = await Property.find({
       $or: [
         { title: regex },
+        { propertyType: regex },
+        { listingType: regex },
         { "address.street": regex },
         { "address.city": regex },
         { "address.state": regex },
+        { "address.country": regex },
+
+        { sellerName: regex },
+      { contactNumber: regex },
       ],
     });
 
@@ -199,6 +216,7 @@ exports.searchProperties = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 // Fetch properties for the logged-in user based on referenceEmail
 exports.getUserProperties = async (req, res) => {
   try {
@@ -212,7 +230,9 @@ exports.getUserProperties = async (req, res) => {
     const properties = await Property.find({ referenceEmail: email });
 
     if (!properties || properties.length === 0) {
-      return res.status(404).json({ error: "No properties found for this user" });
+      return res
+        .status(404)
+        .json({ error: "No properties found for this user" });
     }
 
     res.status(200).json(properties);

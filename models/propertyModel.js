@@ -54,6 +54,16 @@ const PropertySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  images: {
+    type: [String], // Array of strings to store image URLs or file paths
+    validate: {
+      validator: function (array) {
+        return array.length >= 1; // Ensure at least 1 image is submitted
+      },
+      message: "At least one image is required",
+    },
+    required: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
