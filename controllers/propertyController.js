@@ -199,3 +199,24 @@ exports.searchProperties = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// Fetch properties for the logged-in user based on referenceEmail
+exports.getUserProperties = async (req, res) => {
+  try {
+    const { email } = req.user; // Extract the user's email from the token
+
+    if (!email) {
+      return res.status(400).json({ error: "User email is required" });
+    }
+
+    // Find properties where referenceEmail matches the authenticated user's email
+    const properties = await Property.find({ referenceEmail: email });
+
+    if (!properties || properties.length === 0) {
+      return res.status(404).json({ error: "No properties found for this user" });
+    }
+
+    res.status(200).json(properties);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

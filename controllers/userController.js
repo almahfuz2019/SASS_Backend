@@ -4,11 +4,15 @@ const User = require("../models/userModel");
 exports.createOrUpdateUser = async (req, res) => {
   try {
     const { email, name } = req.body;
+    console.log(req.body);
+
     if (!email || !name) {
       return res.status(400).json({ error: "Name and email are required" });
     }
+
     // Find user by email
     let user = await User.findOne({ email });
+
     if (user) {
       // Update existing user
       user.name = name;
@@ -24,11 +28,17 @@ exports.createOrUpdateUser = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-// get all users
+
+// Get all users with pagination
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find();
-    res.status(200).json(users);
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const users = await User.find().skip(parseInt(skip)).limit(parseInt(limit));
+    const totalUsers = await User.countDocuments();
+
+    res.status(200).json({ totalUsers, users });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -38,9 +48,6 @@ exports.getUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -51,17 +58,23 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// Get all users with pagination
-exports.getUsers = async (req, res) => {
+// Update user role and status
+exports.updateUser = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const { id } = req.params;
+    const { role, disabled } = req.body;
 
-    const users = await User.find().skip(parseInt(skip)).limit(parseInt(limit));
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    const totalUsers = await User.countDocuments();
+    if (role) user.role = role;
+    if (disabled !== undefined) user.disabled = disabled;
 
-    res.status(200).json({ totalUsers, users });
+    await user.save();
+
+    res.status(200).json({ message: "User updated successfully", user });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -71,26 +84,11 @@ exports.getUsers = async (req, res) => {
 exports.deleteUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
-
     const user = await User.findByIdAndDelete(id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
     res.status(200).json({ message: "User deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Count total users
-exports.countUsers = async (req, res) => {
-  try {
-    const count = await User.countDocuments();
-    res.status(200).json({ totalUsers: count });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -100,16 +98,30 @@ exports.countUsers = async (req, res) => {
 exports.searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
-    if (!query) {
-      return res.status(400).json({ error: "Search query is required" });
-    }
-
     const regex = new RegExp(query, "i"); // Case-insensitive regex for search
+
     const users = await User.find({
       $or: [{ name: regex }, { email: regex }],
     });
 
-    res.status(200).json(users);
+    res.status(200).json({ totalUsers: users.length, users });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+// Check the user's role
+// Check the user's role
+exports.checkUserRole = async (req, res) => {
+  try {
+    // Assuming req.user is populated by verifyToken middleware
+    const user = await User.findOne({ email: req.user.email });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Return the user's role
+    res.status(200).json({ role: user.role });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

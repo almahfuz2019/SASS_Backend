@@ -38,14 +38,12 @@ exports.getContactById = async (req, res) => {
 // Create a new contact
 exports.createContact = async (req, res) => {
   try {
-    const { email, name, message } = req.body;
-    if (!email || !name || !message) {
-      return res
-        .status(400)
-        .json({ error: "Name, email, and message are required" });
+    const { email, message } = req.body;
+    if (!email || !message) {
+      return res.status(400).json({ error: "email, and message are required" });
     }
     // Create a new contact
-    const contact = new Contact({ name, email, message });
+    const contact = new Contact({ email, message });
     await contact.save();
     res.status(201).json({ message: "Contact created successfully", contact });
   } catch (error) {
@@ -75,7 +73,7 @@ exports.deleteContactById = async (req, res) => {
 exports.updateContactById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, message } = req.body;
+    const { email, message } = req.body;
 
     if (!id) {
       return res.status(400).json({ error: "Contact ID is required" });
@@ -84,7 +82,7 @@ exports.updateContactById = async (req, res) => {
     // Find the contact by ID and update it
     const contact = await Contact.findByIdAndUpdate(
       id,
-      { name, email, message },
+      { email, message },
       { new: true, runValidators: true }, // Return the updated contact and validate
     );
 
@@ -117,7 +115,7 @@ exports.searchContacts = async (req, res) => {
 
     const regex = new RegExp(query, "i"); // Case-insensitive regex for search
     const contacts = await Contact.find({
-      $or: [{ name: regex }, { email: regex }],
+      $or: [{ email: regex }],
     });
 
     res.status(200).json(contacts);
